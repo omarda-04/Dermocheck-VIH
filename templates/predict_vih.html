@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Predicción VIH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f6fc;
+            color: #1b3a4b;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #007bff;
+            padding: 1rem;
+            text-align: center;
+            color: white;
+        }
+
+        main {
+            max-width: 800px;
+            margin: 2rem auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        video, canvas {
+            width: 100%;
+            max-width: 400px;
+            border: 2px solid #007bff;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 0.7rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .results {
+            margin-top: 2rem;
+        }
+
+        .prediction {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1rem;
+        }
+
+        .prediction img {
+            max-width: 150px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #preview {
+            max-width: 200px;
+            border: 2px solid #888;
+            border-radius: 6px;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Detección de VIH a través de Imágenes</h1>
+</header>
+
+<main>
+    <form id="photo-form" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <h3>Captura en tiempo real:</h3>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" style="display: none;"></canvas>
+
+        <input type="hidden" name="image_data" id="image_data">
+        <button type="button" onclick="capturePhoto()">Capturar Foto</button>
+
+        <hr>
+
+        <h3>O seleccionar imagen desde tu dispositivo:</h3>
+        <input type="file" name="images" id="imageFile" accept="image/*" multiple>
+
+        <!-- ✅ Imagen de previsualización -->
+        <img id="preview" alt="Vista previa">
+
+        <button type="submit">Enviar para Análisis</button>
+    </form>
+
+    {% if predictions %}
+    <section class="results">
+        <h2>Resultados de Análisis:</h2>
+        {% for prediction in predictions %}
+        <div class="prediction">
+            <img src="{{ prediction.image_url }}" alt="Imagen subida">
+            <div>
+                <p style="color: {{ prediction.color }}; font-weight: bold;">
+                    {{ prediction.mensaje }} ({{ prediction.percentage }})
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
+</main>
+
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const imageInput = document.getElementById('image_data');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { alert("No se pudo acceder a la cámara: " + err); });
+
+    function capturePhoto() {
+        const context = canvas.getContext('2d');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataURL = canvas.toDataURL('image/jpeg');
+        imageInput.value = dataURL;
+        alert("Foto capturada correctamente. Ahora puedes enviarla.");
+    }
+
+    // ✅ Previsualización de imagen seleccionada desde archivo
+    document.getElementById('imageFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const preview = document.getElementById('preview');
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+
+        // Limpia la imagen capturada de la cámara si se selecciona archivo
+        imageInput.value = "";
+    });
+</script>
+
+</body>
+</html>
